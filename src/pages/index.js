@@ -1,22 +1,26 @@
-import { useState, useEffect } from "react";
-
-import Head from "next/head";
-
-import styles from "@/styles/Home.module.css";
-import Chat from "../../components/Chat";
-import SelectUserName from "../../components/Chat/SelectUsername";
+import { useEffect, useState } from "react";
+import io from "socket.io-client";
 
 export default function Home() {
-  const [username, setUsername] = useState("");
+  const [socket_state, setSocket_state] = useState("try connecting...");
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    fetch("api/socket");
+    setSocket(io());
+  }, []);
+
+  if (socket) {
+    socket.on("connect", () => {
+      console.log("connected successfully", socket.id);
+      setSocket_state("connected successfully 👍");
+    });
+  }
   return (
     <>
-      <Head>
-        <title>Chat App</title>
-      </Head>
-      <main>
-        <Chat />
-        {/* {username ? <Chat /> : <SelectUserName />} */}
-      </main>
+      <div>
+        <h1>socket state: {socket_state}</h1>
+      </div>
     </>
   );
 }

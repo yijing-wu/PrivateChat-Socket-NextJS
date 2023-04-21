@@ -7,7 +7,6 @@ import MessagePanel from "./MessagePanel";
 import User from "./User";
 
 export default function Chat(props) {
-  const [username, setUsername] = useState("");
   const [currentMsg, setCurrentMsg] = useState("");
 
   const [messages, setMessages] = useState([]);
@@ -18,10 +17,10 @@ export default function Chat(props) {
 
   return (
     <div>
-      <h1>Chat</h1>
       <div>
         {/* left panel: user List*/}
         <div className={styles.left_panel}>
+          {props.username}
           <p>User List</p>
           <User />
         </div>
