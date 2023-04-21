@@ -11,8 +11,6 @@ export default function Chat(props) {
 
   const [messages, setMessages] = useState([]);
 
-  const [user, setUsers] = useState([]);
-
   useEffect(() => {});
 
   return (
