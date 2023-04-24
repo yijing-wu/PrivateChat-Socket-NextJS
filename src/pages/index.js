@@ -1,22 +1,23 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import Head from "next/head";
 
-import styles from "@/styles/Home.module.css";
 import Chat from "../../components/Chat";
 import SelectUserName from "../../components/Chat/SelectUsername";
 
-import io from "socket.io-client";
+import { SocketContext } from "@/utilis/SocketContext";
 
 export default function Home() {
-  const [socket_state, setSocket_state] = useState("try connecting...");
+  const [selfUsername, setSelfUsername] = useState("");
+  const [selfSocketId, setSelfSocketId] = useState();
 
-  const [username, setUsername] = useState("");
-  const [users, setUsers] = useState([]);
+  const [usersList, setUsersList] = useState();
 
-  const [input, setInput] = useState("");
+  const [selectedUser, setSelectedUser] = useState();
 
-  let socket = io();
+  const [messagesMap, setMessagesMap] = useState(new Map());
+
+  const socket = useContext(SocketContext);
 
   useEffect(() => {
     socketInitializer();
@@ -27,19 +28,51 @@ export default function Home() {
 
     socket.on("connect", () => {
       console.log("connected successfully", socket.id);
-      setSocket_state("connected successfully 👍");
+      setSelfSocketId(socket.id);
     });
 
-    socket.on("update-input", (msg) => {
-      setInput(msg);
+    socket.on("update-user-list", (users) => {
+      if (users.users) {
+        setUsersList(users.users);
+      }
+    });
+
+    socket.on("private-message", (from, content) => {
+      if (!messagesMap.has(from)) {
+        setMessagesMap(messagesMap.set(from, []));
+      }
+      const newMessages = messagesMap.get(from);
+      newMessages.push({
+        content,
+        fromSelf: false,
+      });
+      setMessagesMap(messagesMap.set(from, newMessages));
     });
   };
 
-  const onChangeHandler = (e) => {
-    setInput(e.target.value);
-    console.log("input-change: " + e.target.value);
-    socket.emit("input-change", e.target.value);
-  };
+  function handleSelectUsername(username) {
+    setSelfUsername(username);
+
+    if (socket) {
+      socket.auth = { username };
+      socket.connect();
+    }
+  }
+
+  function sendMessage(content) {
+    if (socket) {
+      socket.emit("private-message", selectedUser.userId, content);
+    }
+    if (!messagesMap.has(selectedUser.userId)) {
+      setMessagesMap(messagesMap.set(selectedUser.userId, []));
+    }
+    const newMessages = messagesMap.get(selectedUser.userId);
+    newMessages.push({
+      content,
+      fromSelf: true,
+    });
+    setMessagesMap(messagesMap.set(selectedUser.userId, newMessages));
+  }
 
   return (
     <>
@@ -47,21 +80,22 @@ export default function Home() {
         <title>Chat App</title>
       </Head>
       <main>
-        <div>
-          <h1>socket state: {socket_state}</h1>
-        </div>
-        <input
-          placeholder="Type something"
-          value={input}
-          onChange={onChangeHandler}
-        />
-        <p>{input}</p>
-        {/* <Chat />
-        {username ? (
-          <Chat username={username} />
+        {selfUsername ? (
+          <Chat
+            selfUsername={selfUsername}
+            selfSocketId={selfSocketId}
+            usersList={usersList}
+            selectedUser={selectedUser}
+            onSelectUser={(user) => {
+              console.log("select user: " + user);
+              setSelectedUser(user);
+            }}
+            sendMessage={sendMessage}
+            messagesMap={messagesMap}
+          />
         ) : (
           <SelectUserName onSelectUsername={handleSelectUsername} />
-        )} */}
+        )}
       </main>
     </>
   );

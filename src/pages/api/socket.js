@@ -10,13 +10,47 @@ export default function SocketHandler(req, res) {
   const io = new Server(res.socket.server);
   res.socket.server.io = io;
 
-  io.on("connection", (socket) => {
-    console.log("client connected", socket.id);
+  // username
+  io.use((socket, next) => {
+    const username = socket.handshake.auth.username;
+    if (!username) {
+      return next(new Error("invalid username"));
+    }
+    socket.username = username;
+    next();
+  });
 
-    socket.on("input-change", (msg) => {
-      socket.broadcast.emit("update-input", msg);
+  io.on("connection", (socket) => {
+    // fetch existing users
+    const users = getUsers();
+
+    // notify the new user
+    socket.emit("update-user-list", { users });
+
+    // notify existing users
+    socket.broadcast.emit("update-user-list", { users });
+
+    // forward the private message to the right recipient
+    socket.on("private-message", (to, content) => {
+      socket.to(to).emit("private-message", socket.id, content);
+    });
+
+    // notify users upon disconnection
+    socket.on("disconnect", () => {
+      socket.broadcast.emit("user disconnected", socket.id);
     });
   });
+
+  function getUsers() {
+    const users = [];
+    for (let [id, socket] of io.of("/").sockets) {
+      users.push({
+        userId: id,
+        username: socket.username,
+      });
+    }
+    return users;
+  }
 
   res.end();
 }

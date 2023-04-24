@@ -16,7 +16,6 @@ export default function SelectUserName(props) {
         />
         <button
           onClick={() => {
-            console.log(currentInput);
             props.onSelectUsername(currentInput);
           }}
         >
